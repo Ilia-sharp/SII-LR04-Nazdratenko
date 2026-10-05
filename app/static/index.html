@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Подсчёт автомобилей в видео — Nazdratenko</title>
+  <meta name="description" content="Лабораторная работа №4: YOLO считает автомобили на каждом N-м кадре видео и формирует report.json.">
+  <meta name="theme-color" content="#F7F9FC">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Nazdratenko, наверх"><img src="/logo.svg" alt="Nazdratenko" width="196" height="40"></a>
+    <span class="badge">Вариант 16 · car · stride 5</span>
+  </header>
+
+  <main id="top">
+    <!-- A. Загрузка -->
+    <section id="view-upload" class="view" aria-labelledby="h-upload">
+      <div class="hero">
+        <h1 id="h-upload">Подсчёт автомобилей в видео</h1>
+        <p class="lead">Загрузите ролик с дорогой: YOLO найдёт машины на выбранных кадрах и соберёт отчёт.</p>
+      </div>
+
+      <div class="card">
+        <label class="dropzone" id="dropzone" tabindex="0" role="button" aria-describedby="drop-hint">
+          <input type="file" id="file-input" accept="video/*,.mp4,.mov,.avi,.mkv,.webm" hidden>
+          <svg class="drop-icon" viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+            <rect x="6" y="10" width="36" height="28" rx="8" fill="none" stroke="currentColor" stroke-width="2.4"/>
+            <path d="M20 19.5v9l8-4.5z" fill="currentColor"/>
+          </svg>
+          <span class="drop-title" id="drop-title">Перетащите видео сюда или нажмите, чтобы выбрать</span>
+          <span class="drop-hint" id="drop-hint">mp4, mov, avi, mkv или webm</span>
+        </label>
+        <p class="field-error" id="upload-error" role="alert" hidden></p>
+
+        <details class="advanced">
+          <summary>Дополнительно</summary>
+          <div class="advanced-body">
+            <div class="row">
+              <span class="row-label">Класс</span>
+              <span class="chip" title="Класс зафиксирован вариантом 16">car · автомобили</span>
+            </div>
+            <div class="row stride-row">
+              <label class="row-label" for="stride">Анализировать каждый N-й кадр</label>
+              <div class="stride-control">
+                <input type="range" id="stride" min="1" max="30" step="1" value="5">
+                <output id="stride-out" for="stride">5</output>
+              </div>
+              <button type="button" class="link" id="stride-reset">вернуть по варианту (5)</button>
+            </div>
+            <div class="ribbon-wrap">
+              <div class="ribbon" id="ribbon" aria-hidden="true"></div>
+              <p class="ribbon-caption" id="ribbon-caption" aria-live="polite"></p>
+            </div>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-start" disabled>Запустить обработку</button>
+          <button type="button" class="btn secondary" id="btn-sample">Попробовать на примере</button>
+        </div>
+        <p class="actions-extra"><button type="button" class="link" id="btn-example">Посмотреть готовый результат примера</button></p>
+        <p class="note" id="limits-note">Бесплатный сервер медленный: обработка может занять несколько минут. Не закрывайте вкладку.</p>
+      </div>
+    </section>
+
+    <!-- B. Обработка -->
+    <section id="view-progress" class="view" aria-labelledby="h-progress" hidden>
+      <div class="card progress-card">
+        <div class="progress-head">
+          <h2 id="h-progress">Обработка идёт</h2>
+          <button type="button" class="btn ghost" id="btn-cancel">Отменить</button>
+        </div>
+
+        <div class="bar" id="main-bar" role="progressbar" aria-label="Прогресс обработки" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <i></i>
+        </div>
+        <div class="bar-meta">
+          <strong class="percent" id="p-percent">0%</strong>
+          <span class="status" id="p-status" aria-live="polite">Готовлюсь к запуску</span>
+        </div>
+
+        <ol class="stepper" id="stepper">
+          <li data-step="upload"><span class="dot" aria-hidden="true"></span><div><p class="step-name">Загрузка файла</p><p class="step-detail" id="d-upload"></p><div class="mini-bar" id="upload-bar" hidden><i></i></div></div></li>
+          <li data-step="model"><span class="dot" aria-hidden="true"></span><div><p class="step-name">Подготовка модели</p><p class="step-detail" id="d-model"></p></div></li>
+          <li data-step="frames"><span class="dot" aria-hidden="true"></span><div><p class="step-name">Обработка кадров</p><p class="step-detail" id="d-frames"></p></div></li>
+          <li data-step="build"><span class="dot" aria-hidden="true"></span><div><p class="step-name">Сборка видео и отчёта</p><p class="step-detail" id="d-build"></p></div></li>
+          <li data-step="done"><span class="dot" aria-hidden="true"></span><div><p class="step-name">Готово</p><p class="step-detail" id="d-done"></p></div></li>
+        </ol>
+
+        <div class="live" id="live" hidden>
+          <dl class="stats">
+            <div><dt>Кадр</dt><dd id="s-frame">0</dd></div>
+            <div><dt>Обработано</dt><dd id="s-processed">0</dd></div>
+            <div><dt>Пропущено</dt><dd id="s-skipped">0</dd></div>
+            <div><dt>Машин в последнем кадре</dt><dd id="s-last">0</dd></div>
+            <div><dt>Прошло</dt><dd id="s-elapsed">00:00</dd></div>
+            <div><dt>Осталось</dt><dd id="s-eta">оцениваю…</dd></div>
+          </dl>
+          <figure class="chart-fig">
+            <canvas id="spark" height="90" role="img" aria-label="Число машин по обработанным кадрам"></canvas>
+            <figcaption>Число машин на каждом обработанном кадре</figcaption>
+          </figure>
+        </div>
+
+        <p class="progress-error" id="progress-error" role="alert" hidden></p>
+        <div class="actions" id="progress-back" hidden>
+          <button type="button" class="btn primary" id="btn-back">Вернуться</button>
+        </div>
+        <p class="note" id="progress-note">Не закрывайте вкладку: пока она открыта, сервер не засыпает.</p>
+      </div>
+    </section>
+
+    <!-- C. Результаты -->
+    <section id="view-result" class="view" aria-labelledby="h-result" hidden>
+      <div class="hero">
+        <h1 id="h-result">Готово</h1>
+        <p class="lead" id="result-lead"></p>
+      </div>
+
+      <dl class="metrics" id="metrics"></dl>
+
+      <div class="card">
+        <h2>Машины по обработанным кадрам</h2>
+        <figure class="chart-fig">
+          <canvas id="chart" height="180" role="img" aria-label="Число машин по обработанным кадрам"></canvas>
+          <figcaption id="chart-caption"></figcaption>
+        </figure>
+      </div>
+
+      <div class="card" id="video-card" hidden>
+        <h2>Видео с рамками</h2>
+        <video id="result-video" controls preload="metadata" playsinline></video>
+        <p class="note">В ролик попадают только обработанные кадры, поэтому он короче исходного и идёт в реальном времени.</p>
+      </div>
+
+      <div class="card" id="gallery-card" hidden>
+        <h2>Кадры с рамками</h2>
+        <div class="gallery" id="gallery"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>report.json</h2>
+          <div class="btn-row">
+            <button type="button" class="btn small secondary" id="btn-copy">Копировать</button>
+            <a class="btn small secondary" id="dl-report" href="#" download>Скачать</a>
+          </div>
+        </div>
+        <pre class="json" id="report-json" tabindex="0"></pre>
+      </div>
+
+      <div class="card">
+        <h2>Скачать</h2>
+        <div class="btn-row wrap">
+          <a class="btn secondary" id="dl-report2" href="#" download>report.json</a>
+          <a class="btn secondary" id="dl-info" href="#" download>run_info.json</a>
+          <a class="btn secondary" id="dl-video" href="#" download hidden>Видео с рамками</a>
+          <a class="btn primary" id="dl-zip" href="#" download>Скачать всё (zip)</a>
+        </div>
+      </div>
+
+      <div class="card prose">
+        <details>
+          <summary id="why-title">Почему stride = 5</summary>
+          <div id="why-body"></div>
+        </details>
+        <details>
+          <summary>Ограничения простого счётчика</summary>
+          <ul>
+            <li>Среднее и максимум — это число машин <strong>в одном кадре</strong>, а не число разных машин в видео.</li>
+            <li>Одна и та же машина на 30 обработанных кадрах учтена 30 раз: без трекера её не отличить от 30 разных. Поэтому по этим числам нельзя судить о потоке или числе проехавших машин.</li>
+            <li><code>unique_tracks: null</code> означает «не измерялось», а не «ноль машин».</li>
+            <li>Считается только класс COCO <code>car</code>: грузовики, автобусы и мотоциклы не входят. Мелкие, далёкие и закрытые машины детектор может пропустить.</li>
+            <li>Кадры между обработанными не анализируются совсем.</li>
+          </ul>
+        </details>
+      </div>
+
+      <div class="actions center">
+        <button type="button" class="btn primary" id="btn-again">Обработать другое видео</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <img src="/logo.svg" alt="Nazdratenko" width="118" height="24">
+    <p>Лабораторная работа №4 · Системы искусственного интеллекта · Вариант 16 · © 2026 Nazdratenko</p>
+  </footer>
+
+  <dialog id="lightbox" aria-label="Кадр с рамками">
+    <form method="dialog"><button class="btn small secondary lightbox-close" aria-label="Закрыть">Закрыть</button></form>
+    <img id="lightbox-img" alt="">
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
