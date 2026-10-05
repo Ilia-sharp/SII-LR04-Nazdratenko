@@ -1,0 +1,19 @@
+# Render Blueprint: бесплатный веб-сервис (Free: 0.1 CPU, 512 МБ RAM).
+services:
+  - type: web
+    name: sii-lr04-nazdratenko
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: MAX_UPLOAD_MB
+        value: "25"
+      - key: MAX_DURATION_SEC
+        value: "60"
+      - key: JOB_TIMEOUT_MIN
+        value: "45"
+      - key: YOLO_IMGSZ
+        value: "640"
