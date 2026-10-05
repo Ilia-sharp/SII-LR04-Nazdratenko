@@ -1,0 +1,13 @@
+__pycache__/
+.venv/
+venv/
+*.pyc
+*.pt
+outputs/
+.DS_Store
+.idea/
+.vscode/
+*.log
+/tmp/
+.pytest_cache/
+.ruff_cache/
