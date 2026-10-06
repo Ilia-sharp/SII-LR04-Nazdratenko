@@ -102,3 +102,12 @@ def test_reservation_blocks_second_job_until_released(client):
     assert not manager.is_busy()
     second, _ = manager.create_dir()
     assert second != first
+
+
+def test_cancel_all_endpoint_clears_reservation_and_dirs(client, tmp_path):
+    first, job_dir = jobs.manager.create_dir()
+    assert jobs.manager.is_busy() and job_dir.exists()
+    response = client.post("/api/jobs/cancel-all")
+    assert response.status_code == 200 and response.json() == {"stopped": 0}
+    assert not jobs.manager.is_busy()
+    jobs.manager.release(first)

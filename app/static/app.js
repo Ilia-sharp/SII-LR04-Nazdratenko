@@ -329,6 +329,7 @@ function resetProgressView() {
   $("progress-error").hidden = true;
   $("progress-back").hidden = true;
   $("btn-cancel").hidden = false;
+  $("btn-cancel-all").hidden = false;
   $("progress-note").hidden = false;
   $("h-progress").textContent = "Обработка идёт";
   $("upload-bar").hidden = true;
@@ -344,6 +345,7 @@ function showProgressError(message) {
   $("progress-error").hidden = false;
   $("progress-back").hidden = false;
   $("btn-cancel").hidden = true;
+  $("btn-cancel-all").hidden = true;
   $("progress-note").hidden = true;
   const active = document.querySelector("#stepper li.active");
   if (active) setSteps(active.dataset.step, { failed: true });
@@ -540,6 +542,26 @@ async function cancel() {
   }
 }
 
+// «Отменить всё»: прервать загрузку и обработку, удалить файлы на сервере, вернуть форму в исходное состояние.
+async function cancelAll() {
+  const button = $("btn-cancel-all");
+  button.disabled = true;
+  state.pollToken = null;
+  if (state.xhr) state.xhr.abort();
+  let message = "Всё отменено, файлы на сервере удалены.";
+  try {
+    await api("/api/jobs/cancel-all", { method: "POST" });
+  } catch {
+    message = "Отменено в браузере, но сервер не ответил. Проверьте через минуту.";
+  } finally {
+    button.disabled = false;
+  }
+  clearFile();
+  setStride(state.cfg.stride.default);
+  uploadError("");
+  backToUpload(message);
+}
+
 // ---------- C. экран результатов ----------
 
 function highlightJson(value) {
@@ -729,6 +751,7 @@ async function init() {
   initUpload();
 
   $("btn-cancel").addEventListener("click", cancel);
+  $("btn-cancel-all").addEventListener("click", cancelAll);
   $("btn-back").addEventListener("click", () => backToUpload());
   $("btn-again").addEventListener("click", () => {
     clearFile();

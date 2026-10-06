@@ -129,6 +129,12 @@ async def create_job(
     return {"job_id": job_id}
 
 
+@app.post("/api/jobs/cancel-all")
+def cancel_all_jobs() -> dict[str, int]:
+    """Остановить всё и удалить файлы всех задач."""
+    return {"stopped": manager.cancel_all()}
+
+
 @app.get("/api/jobs/{job_id}")
 def get_job(job_id: str) -> dict:
     return manager.snapshot(_job_or_404(job_id))

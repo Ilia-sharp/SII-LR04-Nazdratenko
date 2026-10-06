@@ -295,6 +295,29 @@ class JobManager:
         threading.Timer(KILL_GRACE_SEC, _kill_tree, args=(job.proc,)).start()
         return True
 
+    def cancel_all(self) -> int:
+        """Остановить все процессы и удалить все задачи вместе с файлами. Вернуть число остановленных."""
+        with self.lock:
+            all_jobs = list(self.jobs.values())
+            self.jobs.clear()
+            self.reserved = None
+        stopped = 0
+        for job in all_jobs:
+            if job.proc is not None and job.proc.poll() is None:
+                job.cancelled = True
+                _kill_tree(job.proc)
+                stopped += 1
+            if job.timer is not None:
+                job.timer.cancel()
+        for job in all_jobs:
+            if job.proc is not None:
+                try:
+                    job.proc.wait(timeout=KILL_GRACE_SEC)
+                except subprocess.TimeoutExpired:
+                    pass
+            shutil.rmtree(job.dir, ignore_errors=True)
+        return stopped
+
     def get(self, job_id: str) -> Job | None:
         if not JOB_ID_RE.match(job_id):
             return None
