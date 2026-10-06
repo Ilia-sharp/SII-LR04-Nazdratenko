@@ -184,6 +184,7 @@ class JobManager:
     def __init__(self) -> None:
         self.jobs: dict[str, Job] = {}
         self.lock = threading.Lock()
+        self.reserved: str | None = None  # место занято на время загрузки файла, до запуска процесса
 
     # ---- запуск и управление -------------------------------------------------
 
@@ -193,22 +194,46 @@ class JobManager:
             if child.is_dir() and JOB_ID_RE.match(child.name):
                 shutil.rmtree(child, ignore_errors=True)
 
-    def active(self) -> Job | None:
-        with self.lock:
-            for job in self.jobs.values():
-                if job.proc is not None and job.returncode is None:
-                    return job
+    def _running_locked(self) -> Job | None:
+        """Задача с живым процессом (вызывать под self.lock)."""
+        for job in self.jobs.values():
+            if job.proc is not None and job.returncode is None:
+                return job
         return None
 
+    def active(self) -> Job | None:
+        with self.lock:
+            return self._running_locked()
+
+    def is_busy(self) -> bool:
+        """Идёт обработка или кто-то прямо сейчас загружает файл."""
+        with self.lock:
+            return self.reserved is not None or self._running_locked() is not None
+
     def create_dir(self) -> tuple[str, Path]:
-        """Занять место под новую задачу (или отказать, если уже идёт другая)."""
+        """Занять место под новую задачу (или отказать, если уже идёт другая).
+
+        Проверка и бронь делаются под одним замком: два одновременных запроса не запустят две обработки.
+        """
         self.cleanup()
-        if self.active() is not None:
-            raise Busy("Сейчас идёт другая обработка. Дождитесь её окончания или отмените.")
-        job_id = uuid.uuid4().hex[:12]
+        with self.lock:
+            if self.reserved is not None or self._running_locked() is not None:
+                raise Busy("Сейчас идёт другая обработка. Дождитесь её окончания или отмените.")
+            job_id = uuid.uuid4().hex[:12]
+            self.reserved = job_id
         job_dir = jobs_root() / job_id
-        job_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            job_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            self.release(job_id)
+            raise
         return job_id, job_dir
+
+    def release(self, job_id: str) -> None:
+        """Снять бронь (загрузка не удалась или отменена)."""
+        with self.lock:
+            if self.reserved == job_id:
+                self.reserved = None
 
     def start(
         self, job_id: str, job_dir: Path, input_path: Path, source_label: str, stride: int, delete_input: bool
@@ -231,6 +256,7 @@ class JobManager:
         log = open(job_dir / "stdout.log", "wb")  # noqa: SIM115 - закрывается в _watch
         with self.lock:
             self.jobs[job_id] = job
+            self.reserved = None  # дальше «занято» определяется живым процессом
             job.proc = subprocess.Popen(
                 cmd, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT,
                 start_new_session=hasattr(os, "setsid"),

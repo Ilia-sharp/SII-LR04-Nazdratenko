@@ -6,13 +6,16 @@
   1. обрезает и пережимает видео через ffmpeg в data/sample.mp4 (H.264, без звука, до 8 МБ);
   2. запускает CLI по варианту 16 (car, stride 5) и сохраняет результат в examples/sample/;
   3. проверяет report.json скриптом check_report.py и размеры файлов в examples/;
-  4. прогоняет эксперимент со stride 1/5/10/30 и пишет docs/stride_experiment.md.
+  4. прогоняет эксперимент со stride 1/5/10/30 и пишет docs/stride_experiment.md;
+  5. подставляет реальные числа в README (между маркерами results и experiment).
 
 Все числа берутся из реальных запусков. Нужны установленные зависимости проекта и ffmpeg.
 """
 
 import argparse
 import json
+import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +26,9 @@ import cv2
 ROOT = Path(__file__).resolve().parent.parent
 SAMPLE = ROOT / "data" / "sample.mp4"
 EXAMPLE_DIR = ROOT / "examples" / "sample"
+README = ROOT / "README.md"
+EXPERIMENT_DOC = ROOT / "docs" / "stride_experiment.md"
+SHOWN_FRAMES = 3  # сколько кадров показать в README
 
 MIN_SECONDS = 10
 MAX_SECONDS = 60
@@ -80,6 +86,76 @@ def shrink_frames(frames_dir: Path) -> None:
         print(f"кадр {path.name}: {path.stat().st_size / 1024:.0f} КБ")
 
 
+def replace_block(text: str, name: str, body: str) -> str:
+    """Заменить содержимое между маркерами <!-- name:start --> и <!-- name:end -->."""
+    pattern = re.compile(rf"(<!-- {name}:start -->\n).*?(\n<!-- {name}:end -->)", re.S)
+    if not pattern.search(text):
+        sys.exit(f"В README нет маркеров {name}:start / {name}:end")
+    return pattern.sub(lambda m: m.group(1) + body + m.group(2), text)
+
+
+def results_block() -> str:
+    """Текст раздела «Результаты на sample» из реальных файлов examples/sample/."""
+    report = json.loads((EXAMPLE_DIR / "report.json").read_text(encoding="utf-8"))
+    info = json.loads((EXAMPLE_DIR / "run_info.json").read_text(encoding="utf-8"))
+    counts = {item["frame"]: item["count"] for item in info["per_frame"]}
+    saved = sorted(p.name for p in (EXAMPLE_DIR / "frames").glob("frame_*.jpg"))
+    by_number = {int(name[6:12]): name for name in saved}
+    peak_frame = max(counts, key=lambda k: (counts[k], -k))  # первый кадр с максимумом
+    numbers = [peak_frame] + [n for n in (min(by_number), max(by_number)) if n != peak_frame]
+    skipped = report["frames_total"] - report["frames_processed"]
+    peak_mem = f", пик памяти процесса {info['peak_rss_mb']} МБ" if info.get("peak_rss_mb") else ""
+    lines = [
+        "Запуск: `python -m src.count_video --source data/sample.mp4 --class car --stride 5`. "
+        f"Видео {info['width']}×{info['height']}, {info['fps_source']:g} кадр/с. "
+        f"Всего кадров {report['frames_total']}, обработано {report['frames_processed']}, пропущено {skipped}. "
+        f"Среднее число машин на обработанный кадр {report['detections_per_frame_mean']}, "
+        f"максимум {report['detections_per_frame_max']}. "
+        f"Время обработки {report['elapsed_sec']} с (загрузка модели {info['model_load_sec']} с{peak_mem}).",
+        "",
+        f"Замер сделан на {platform.platform()}, Python {info['python_version']}, "
+        f"ultralytics {info['ultralytics_version']}, torch {info['torch_version']}, веса `{info['weights']}`.",
+        "",
+        "`examples/sample/report.json`:",
+        "",
+        "```json",
+        json.dumps(report, ensure_ascii=False, indent=2),
+        "```",
+        "",
+        "Кадры с рамками (все файлы лежат в [examples/sample/](examples/sample/)):",
+        "",
+    ]
+    for number in numbers[:SHOWN_FRAMES]:
+        name = by_number[number]
+        lines.append(f"![кадр {number}: car {counts[number]}](examples/sample/frames/{name})")
+        lines.append("")
+    if (EXAMPLE_DIR / "annotated.mp4").is_file():
+        lines.append("Видео с рамками: [examples/sample/annotated.mp4](examples/sample/annotated.mp4). "
+                     "В него попадают только обработанные кадры.")  # fmt: skip
+    return "\n".join(lines).rstrip()
+
+
+def experiment_block() -> str:
+    """Таблица эксперимента со stride из docs/stride_experiment.md."""
+    text = EXPERIMENT_DOC.read_text(encoding="utf-8").splitlines()
+    table = [line for line in text if line.startswith("|")]
+    note = [line for line in text if line.startswith("> **Важно:**")]
+    out = note + ([""] if note else []) + table
+    out += [
+        "",
+        "Основной запуск — stride 5 (по варианту); остальные строки только для сравнения, один запуск на значение.",
+    ]
+    return "\n".join(out)
+
+
+def update_readme(with_experiment: bool) -> None:
+    text = README.read_text(encoding="utf-8")
+    text = replace_block(text, "results", results_block())
+    if with_experiment and EXPERIMENT_DOC.is_file():
+        text = replace_block(text, "experiment", experiment_block())
+    README.write_text(text, encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--video", required=True, type=Path, help="исходное видео (скачанное с источника)")
@@ -120,7 +196,8 @@ def main() -> int:
             cmd += ["--clip-seconds", str(args.clip_seconds)]
         run(cmd)
 
-    print("\nГотово. Проверьте git status, затем внесите числа в README (разделы 6 и 7).")
+    update_readme(with_experiment=not args.skip_experiment)
+    print("\nГотово: README обновлён. Проверьте git status и git diff.")
     return 0
 
 

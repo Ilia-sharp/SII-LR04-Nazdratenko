@@ -11,6 +11,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 
 from . import jobs
 from .jobs import manager
@@ -48,7 +49,7 @@ def config() -> dict:
         },
         "extensions": list(jobs.ALLOWED_EXTENSIONS),
         "job_timeout_min": jobs.limits.job_timeout_min,
-        "busy": manager.active() is not None,
+        "busy": manager.is_busy(),
         "sample_available": jobs.sample_video().is_file(),
         "example_available": (jobs.example_dir() / "report.json").is_file(),
     }
@@ -94,6 +95,7 @@ async def create_job(
     except jobs.Busy as exc:
         raise HTTPException(409, str(exc)) from None
 
+    started = False
     try:
         if use_sample:
             sample = jobs.sample_video()
@@ -113,13 +115,17 @@ async def create_job(
             label = f"uploads/{Path(file.filename).name}"[:120]
             delete_input = True
             try:
-                jobs.check_limits(jobs.probe_video(input_path))
+                # Проверка идёт в отдельном процессе и в пуле потоков: цикл событий (health, опрос) не блокируется.
+                meta = await run_in_threadpool(jobs.probe_video, input_path)
+                jobs.check_limits(meta)
             except jobs.VideoRejected as exc:
                 raise HTTPException(400, str(exc)) from None
         manager.start(job_id, job_dir, input_path, label, stride, delete_input)
-    except Exception:
-        shutil.rmtree(job_dir, ignore_errors=True)
-        raise
+        started = True
+    finally:
+        if not started:  # отказ, обрыв загрузки или отмена запроса: убрать папку и снять бронь
+            shutil.rmtree(job_dir, ignore_errors=True)
+            manager.release(job_id)
     return {"job_id": job_id}
 
 

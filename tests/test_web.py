@@ -90,3 +90,15 @@ def test_job_id_format_is_strict():
     assert jobs.manager.get("../../etc") is None
     assert jobs.manager.get("ABCDEF123456") is None
     assert jobs.manager.get("0123456789ab") is None  # формат верный, но такой задачи нет
+
+
+def test_reservation_blocks_second_job_until_released(client):
+    manager = jobs.JobManager()
+    first, _ = manager.create_dir()
+    assert manager.is_busy()
+    with pytest.raises(jobs.Busy):
+        manager.create_dir()  # место занято на время загрузки первого файла
+    manager.release(first)
+    assert not manager.is_busy()
+    second, _ = manager.create_dir()
+    assert second != first
