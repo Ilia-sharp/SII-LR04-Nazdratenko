@@ -41,7 +41,7 @@ def config() -> dict:
     return {
         "class_name": jobs.CLASS_NAME,
         "class_label": jobs.CLASS_LABEL,
-        "stride": {"default": jobs.DEFAULT_STRIDE, "min": jobs.MIN_STRIDE, "max": jobs.MAX_STRIDE},
+        "stride": {"default": jobs.DEFAULT_STRIDE, "min": jobs.MIN_STRIDE, "max": jobs.MAX_STRIDE, "step": jobs.STRIDE_STEP},
         "limits": {
             "max_upload_mb": jobs.limits.max_upload_mb,
             "max_duration_sec": jobs.limits.max_duration_sec,
@@ -88,7 +88,7 @@ async def create_job(
         raise HTTPException(413, f"Файл больше {jobs.limits.max_upload_mb} МБ. Сожмите или обрежьте видео.")
     if not 1 <= stride <= 10_000:
         raise HTTPException(400, "stride должен быть целым числом ≥ 1.")
-    stride = max(jobs.MIN_STRIDE, min(jobs.MAX_STRIDE, stride))
+    stride = jobs.snap_stride(stride)
 
     try:
         job_id, job_dir = manager.create_dir()

@@ -27,7 +27,7 @@ def test_health_is_instant_and_ok(client):
 def test_config_has_variant_16_defaults(client):
     cfg = client.get("/api/config").json()
     assert cfg["class_name"] == "car"
-    assert cfg["stride"] == {"default": 5, "min": 1, "max": 30}
+    assert cfg["stride"] == {"default": 5, "min": 5, "max": 30, "step": 5}
     assert cfg["limits"]["max_upload_mb"] == 25 and cfg["limits"]["max_duration_sec"] == 60
     assert cfg["sample_available"] is False and cfg["example_available"] is False
 
@@ -111,3 +111,7 @@ def test_cancel_all_endpoint_clears_reservation_and_dirs(client, tmp_path):
     assert response.status_code == 200 and response.json() == {"stopped": 0}
     assert not jobs.manager.is_busy()
     jobs.manager.release(first)
+
+
+def test_stride_snaps_to_step():
+    assert [jobs.snap_stride(v) for v in (1, 5, 7, 8, 12, 30, 99)] == [5, 5, 5, 10, 10, 30, 30]

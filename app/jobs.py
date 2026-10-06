@@ -26,8 +26,15 @@ ROOT = Path(__file__).resolve().parent.parent
 CLASS_NAME = "car"
 CLASS_LABEL = "автомобили"
 DEFAULT_STRIDE = 5
-MIN_STRIDE = 1
+MIN_STRIDE = 5
 MAX_STRIDE = 30
+STRIDE_STEP = 5  # ползунок: 5, 10, 15, 20, 25, 30
+
+
+def snap_stride(value: int) -> int:
+    """Привести stride к ближайшему допустимому (кратному шагу, в границах ползунка)."""
+    snapped = round(int(value) / STRIDE_STEP) * STRIDE_STEP
+    return max(MIN_STRIDE, min(MAX_STRIDE, snapped))
 
 ALLOWED_EXTENSIONS = (".mp4", ".mov", ".avi", ".mkv", ".webm")
 JOB_ID_RE = re.compile(r"^[0-9a-f]{12}$")
@@ -239,7 +246,7 @@ class JobManager:
         self, job_id: str, job_dir: Path, input_path: Path, source_label: str, stride: int, delete_input: bool
     ) -> Job:
         """Запустить CLI подпроцессом: аргументы списком, без shell."""
-        stride = max(MIN_STRIDE, min(MAX_STRIDE, int(stride)))
+        stride = snap_stride(stride)
         job = Job(job_id, job_dir, stride, source_label, input_path, delete_input)
         cmd = [
             sys.executable, "-m", "src.count_video",
