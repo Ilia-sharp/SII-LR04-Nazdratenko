@@ -8,7 +8,7 @@ from src.report import REPORT_KEYS, ProgressWriter, build_report, write_json_ato
 
 
 def make_report(counts=(3, 0, 5), stride=5, frames_total=11, elapsed=1.234):
-    return build_report("data\\sample.mp4", "car", stride, frames_total, list(counts), elapsed)
+    return build_report("data\\sample.mp4", "zebra", stride, frames_total, list(counts), elapsed)
 
 
 def test_exactly_ten_keys_in_order():
@@ -20,7 +20,7 @@ def test_exactly_ten_keys_in_order():
 def test_values_and_types():
     report = make_report()
     assert report["source"] == "data/sample.mp4"  # слеши прямые
-    assert report["class_name"] == "car"
+    assert report["class_name"] == "zebra"
     assert report["stride"] == 5 and isinstance(report["stride"], int)
     assert report["frames_total"] == 11
     assert report["frames_processed"] == 3

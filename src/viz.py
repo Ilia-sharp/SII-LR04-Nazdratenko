@@ -57,7 +57,7 @@ def _draw_label(img: np.ndarray, text: str, x: int, y: int, scale: float) -> Non
 
 
 def annotate(frame: np.ndarray, boxes: list[Box], class_name: str, frame_index: int) -> np.ndarray:
-    """Нарисовать рамки и подпись `car: N | frame i` прямо на кадре."""
+    """Нарисовать рамки и подпись `zebra: N | frame i` прямо на кадре."""
     scale = _font_scale(frame.shape[1])
     for box in boxes:
         p1 = (int(box.x1), int(box.y1))

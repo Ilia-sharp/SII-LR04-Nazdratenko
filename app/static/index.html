@@ -3,85 +3,105 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Подсчёт автомобилей в видео — Nazdratenko</title>
-  <meta name="description" content="Лабораторная работа №4: YOLO считает автомобили на каждом N-м кадре видео.">
+  <title>Подсчёт зебр в видео — Nazdratenko</title>
+  <meta name="description" content="Лабораторная работа №4: YOLO считает зебр на каждом N-м кадре видео.">
+  <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header class="wrap top"><img src="/logo.svg" alt="Nazdratenko" width="176" height="32"></header>
+  <header class="top">
+    <div class="shell bar-top">
+      <img src="/logo.svg" alt="Nazdratenko" width="176" height="32">
+      <span class="chip" title="Параметры варианта 16">zebra · stride 5</span>
+    </div>
+  </header>
 
-  <main class="wrap">
-    <h1>Подсчёт автомобилей в видео</h1>
+  <main class="shell">
+    <div class="intro">
+      <h1>Подсчёт зебр в видео</h1>
+      <p>Каждый N-й кадр проходит через YOLO — на выходе средние показатели и видео с рамками.</p>
+    </div>
 
-    <section id="pick" aria-labelledby="h1">
-      <h2 id="h1">Видео</h2>
-      <label class="drop" id="drop" tabindex="0">
-        <input type="file" id="file" accept="video/*,.mp4,.mov,.avi,.mkv,.webm" hidden>
-        <span class="drop-main" id="drop-main">Перетащите видео или нажмите</span>
-        <span class="drop-sub" id="drop-sub"></span>
-      </label>
-      <p class="err" id="err" role="alert" hidden></p>
-      <video id="preview" controls playsinline preload="metadata" hidden></video>
+    <div class="layout">
+      <aside class="side">
+        <section id="pick" aria-labelledby="h1">
+          <h2 id="h1">Видео</h2>
+          <label class="drop" id="drop" tabindex="0">
+            <input type="file" id="file" accept="video/*,.mp4,.mov,.avi,.mkv,.webm" hidden>
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+            <span class="drop-main" id="drop-main">Перетащите видео или нажмите</span>
+            <span class="drop-sub" id="drop-sub"></span>
+          </label>
+          <p class="err" id="err" role="alert" hidden></p>
+          <video id="preview" controls playsinline preload="metadata" hidden></video>
 
-      <div class="pick">
-        <div class="pick-head"><label for="stride">Каждый</label><output id="stride-out" for="stride">5</output><span>-й кадр</span></div>
-        <input type="range" id="stride" min="5" max="30" step="5" value="5">
-        <div class="ticks" id="ticks"></div>
+          <div class="field">
+            <div class="field-head"><label for="stride">Шаг отбора кадров</label><span class="val">каждый <output id="stride-out" for="stride">5</output>-й</span></div>
+            <input type="range" id="stride" min="5" max="30" step="5" value="5">
+            <div class="ticks" id="ticks"></div>
+          </div>
+
+          <div class="row">
+            <button type="button" class="btn primary" id="go" disabled>Считать</button>
+            <button type="button" class="btn" id="sample" hidden>На примере</button>
+            <button type="button" class="link" id="example" hidden>Готовый результат</button>
+          </div>
+        </section>
+
+        <section id="hist" aria-labelledby="h4">
+          <h2 id="h4">Последние видео</h2>
+          <ul class="hist" id="hist-list"></ul>
+          <p class="empty" id="hist-empty">Пока пусто</p>
+        </section>
+      </aside>
+
+      <div class="work">
+        <section id="run" aria-labelledby="h2">
+          <h2 id="h2">Ход работы</h2>
+          <div class="run-top">
+            <strong class="big" id="pct">0%</strong>
+            <span class="status" id="status" aria-live="polite">Ждёт запуска</span>
+            <button type="button" class="btn small" id="cancel" hidden>Отмена</button>
+          </div>
+          <div class="bar" id="bar" role="progressbar" aria-label="Прогресс" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+          <ol class="steps" id="steps">
+            <li data-s="upload"><b></b>Отправка видео<span id="d-upload"></span></li>
+            <li data-s="model"><b></b>Подготовка модели<span id="d-model"></span></li>
+            <li data-s="frames"><b></b>Поиск зебр<span id="d-frames"></span></li>
+            <li data-s="build"><b></b>Сборка результата<span id="d-build"></span></li>
+          </ol>
+          <canvas id="spark" height="56" hidden aria-label="Зебры по кадрам"></canvas>
+          <p class="err" id="run-err" role="alert" hidden></p>
+        </section>
+
+        <section id="out" class="panel" aria-labelledby="h3" inert><div>
+          <h2 id="h3">Результат</h2>
+          <p class="lead" id="lead"></p>
+          <div class="tabs" id="tabs" hidden role="tablist">
+            <button type="button" data-v="src">Оригинал</button><button type="button" data-v="ann">С рамками</button>
+          </div>
+          <video id="video" controls playsinline preload="metadata" hidden></video>
+          <dl class="metrics" id="metrics"></dl>
+          <figure>
+            <canvas id="chart" height="180" aria-label="Зебры по обработанным кадрам"></canvas>
+            <figcaption id="chart-cap">Зебр в одном кадре, а не разных зебр.</figcaption>
+          </figure>
+          <details><summary>report.json</summary><pre id="json" tabindex="0"></pre></details>
+          <div class="row">
+            <a class="btn primary" id="dl-zip" href="#" download hidden>Скачать всё</a>
+            <a class="btn" id="dl-report" href="#" download="report.json">report.json</a>
+            <button type="button" class="btn" id="copy">Копировать</button>
+          </div>
+        </div></section>
       </div>
-      <div class="row">
-        <button type="button" class="btn solid" id="go" disabled>Считать</button>
-        <button type="button" class="btn" id="sample" hidden>На примере</button>
-        <button type="button" class="link" id="example" hidden>Готовый результат</button>
-      </div>
-    </section>
-
-    <section id="run" aria-labelledby="h2">
-      <h2 id="h2">Ход работы</h2>
-      <div class="run-top">
-        <strong class="big" id="pct">0%</strong>
-        <span class="status" id="status" aria-live="polite">Ждёт запуска</span>
-        <button type="button" class="btn small" id="cancel" hidden>Отмена</button>
-      </div>
-      <div class="bar" id="bar" role="progressbar" aria-label="Прогресс" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
-      <ol class="steps" id="steps">
-        <li data-s="upload"><b></b>Отправка видео<span id="d-upload"></span></li>
-        <li data-s="model"><b></b>Подготовка модели<span id="d-model"></span></li>
-        <li data-s="frames"><b></b>Поиск машин<span id="d-frames"></span></li>
-        <li data-s="build"><b></b>Сборка результата<span id="d-build"></span></li>
-      </ol>
-      <canvas id="spark" height="56" hidden aria-label="Машины по кадрам"></canvas>
-      <p class="err" id="run-err" role="alert" hidden></p>
-    </section>
-
-    <section id="out" class="panel" aria-labelledby="h3" inert><div>
-      <h2 id="h3">Результат</h2>
-      <p class="lead" id="lead"></p>
-      <div class="tabs" id="tabs" hidden>
-        <button type="button" data-v="src">Оригинал</button><button type="button" data-v="ann">С рамками</button>
-      </div>
-      <video id="video" controls playsinline preload="metadata" hidden></video>
-      <dl class="metrics" id="metrics"></dl>
-      <figure>
-        <canvas id="chart" height="180" aria-label="Машины по обработанным кадрам"></canvas>
-        <figcaption id="chart-cap">Машин в одном кадре, а не разных машин.</figcaption>
-      </figure>
-      <details><summary>report.json</summary><pre id="json" tabindex="0"></pre></details>
-      <div class="row">
-        <a class="btn solid" id="dl-zip" href="#" download hidden>Скачать всё</a>
-        <a class="btn" id="dl-report" href="#" download="report.json">report.json</a>
-        <button type="button" class="btn" id="copy">Копировать</button>
-      </div>
-    </div></section>
-
-    <section id="hist" aria-labelledby="h4">
-      <h2 id="h4">Последние видео</h2>
-      <ul class="hist" id="hist-list"></ul>
-      <p class="empty" id="hist-empty">Пока пусто</p>
-    </section>
+    </div>
   </main>
 
-  <footer class="wrap foot">ЛР №4 · Системы искусственного интеллекта · Вариант 16 · © 2026 Nazdratenko</footer>
+  <footer class="shell foot">ЛР №4 · Системы искусственного интеллекта · Вариант 16 · © 2026 Nazdratenko</footer>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="/app.js"></script>
 </body>

@@ -5,7 +5,7 @@ const $ = (id) => document.getElementById(id);
 const nf = new Intl.NumberFormat("ru-RU");
 const nf2 = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
 const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const INK = "#111", HOT = "#FF5A1F", MUTE = "#6B6B6B", GRID = "#E2E2E2";
+const ACCENT = "#4F46E5", BAR = "#94A3B8", MUTE = "#64748B", GRID = "#E2E8F0";
 const JOB_KEY = "lr04.job", HIST_KEY = "lr04.hist", HIST_MAX = 5;
 
 const S = { cfg: null, file: null, xhr: null, token: null, jobId: null, pend: null, shown: 0, counts: [], frames: [], item: null, urls: [], previewUrl: null, report: "" };
@@ -124,7 +124,7 @@ function bars(canvas, counts, frames, axes, onHover) {
     }
     counts.forEach((v, i) => {
       const bh = v === 0 ? 2 : Math.max(3, (v / max) * ph);
-      ctx.fillStyle = i === hot || (hot < 0 && axes && v === max) ? HOT : v === 0 ? GRID : INK;
+      ctx.fillStyle = i === hot || (hot < 0 && axes && v === max) ? ACCENT : v === 0 ? GRID : axes ? BAR : ACCENT;
       ctx.fillRect(pad.l + i * (bw + gap), pad.t + ph - bh, bw, bh);
     });
   };
@@ -135,10 +135,10 @@ function bars(canvas, counts, frames, axes, onHover) {
   }
 }
 function drawChart() {
-  const cap = $("chart-cap"), base = "Машин в одном кадре, а не разных машин.";
+  const cap = $("chart-cap"), base = "Зебр в одном кадре, а не разных зебр.";
   bars($("chart"), S.counts, S.frames, true, (i) => {
     cap.classList.toggle("hit", i >= 0);
-    cap.textContent = i < 0 ? base : `кадр ${nf.format(S.frames[i])} · машин: ${S.counts[i]}`;
+    cap.textContent = i < 0 ? base : `кадр ${nf.format(S.frames[i])} · зебр: ${S.counts[i]}`;
   });
 }
 addEventListener("resize", () => { if (S.item) drawChart(); if (!$("spark").hidden) bars($("spark"), S.counts, [], false); });
@@ -153,6 +153,7 @@ function setStride(v) {
   $("stride").value = String(n);
   const out = $("stride-out");
   if (out.textContent !== String(n)) { out.textContent = String(n); out.classList.add("bump"); setTimeout(() => out.classList.remove("bump"), 160); }
+  $("stride").style.setProperty("--p", `${max === min ? 0 : ((n - min) / (max - min)) * 100}%`);
   document.querySelectorAll("#ticks button").forEach((b) => b.classList.toggle("on", Number(b.dataset.v) === n));
 }
 
@@ -224,7 +225,7 @@ function initPick() {
 // ---------- ход работы ----------
 const STEP_OF = { loading_model: "model", processing: "frames", encoding: "build", finalizing: "build" };
 const ORDER = ["upload", "model", "frames", "build"];
-const STATUS = { upload: "Отправляю видео", model: "Готовлю модель", frames: "Ищу машины", build: "Собираю результат" };
+const STATUS = { upload: "Отправляю видео", model: "Готовлю модель", frames: "Ищу зебр", build: "Собираю результат" };
 
 function setSteps(active, { failed = false, all = false } = {}) {
   const idx = ORDER.indexOf(active);
@@ -245,7 +246,7 @@ function setProgress(pct, wait = false) {
   $("bar").setAttribute("aria-valuenow", String(Math.round(v)));
   $("bar").classList.toggle("wait", wait);
   tween($("pct"), v, (x) => `${Math.round(x)}%`);
-  document.title = `${Math.round(v)}% · Подсчёт автомобилей`;
+  document.title = `${Math.round(v)}% · Подсчёт зебр`;
 }
 
 function resetRun() {
@@ -262,7 +263,7 @@ function idle(message) {
   S.token = null; S.jobId = null; sset(null);
   $("pick").classList.remove("locked"); $("pick").removeAttribute("inert");
   $("cancel").hidden = true;
-  document.title = "Подсчёт автомобилей в видео — Nazdratenko";
+  document.title = "Подсчёт зебр в видео — Nazdratenko";
   if (message) toast(message);
 }
 

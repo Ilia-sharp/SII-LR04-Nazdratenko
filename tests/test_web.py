@@ -26,7 +26,7 @@ def test_health_is_instant_and_ok(client):
 
 def test_config_has_variant_16_defaults(client):
     cfg = client.get("/api/config").json()
-    assert cfg["class_name"] == "car"
+    assert cfg["class_name"] == "zebra"
     assert cfg["stride"] == {"default": 5, "min": 5, "max": 30, "step": 5}
     assert cfg["limits"]["max_upload_mb"] == 25 and cfg["limits"]["max_duration_sec"] == 60
     assert cfg["sample_available"] is False and cfg["example_available"] is False

@@ -119,7 +119,7 @@ def run(
 
     est_total = info.frame_count_est
     expected = math.ceil(est_total / stride) if est_total else 0
-    # Из лимита кадров один слот отдаём кадру с максимумом машин, остальные - равномерно.
+    # Из лимита кадров один слот отдаём кадру с максимумом объектов, остальные - равномерно.
     uniform = _uniform_ordinals(expected, save_frames - 1 if save_frames > 1 else 0)
     video = AnnotatedVideo(out_dir / "annotated.mp4", info.fps / stride) if write_video else None
 

@@ -1,6 +1,6 @@
 """CLI подсчёта объектов в видео.
 
-    python -m src.count_video --source data/sample.mp4 --class car --stride 5
+    python -m src.count_video --source data/sample.mp4 --class zebra --stride 5
 
 Коды выхода: 0 - успех; 2 - неверные аргументы или неизвестный класс;
 3 - файл не найден / не открывается / нет кадров; 130 - прерывание (Ctrl+C, SIGTERM).
@@ -22,7 +22,7 @@ from .pipeline import ASSUMED_FPS, PCT_ENCODING_END, PCT_MODEL_DONE, VideoError,
 from .report import ProgressWriter, build_report, build_run_info, peak_rss_mb, write_json_atomic
 
 # Параметры варианта 16 из журнала: менять нельзя.
-DEFAULT_CLASS = "car"
+DEFAULT_CLASS = "zebra"
 DEFAULT_STRIDE = 5
 DEFAULT_SOURCE = "data/sample.mp4"
 DEFAULT_MODEL = "yolov8n.pt"
@@ -81,7 +81,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--class",
         dest="class_name",
         default=DEFAULT_CLASS,
-        help="имя класса COCO (по умолчанию %(default)s: ровно car, без грузовиков и автобусов)",
+        help="имя класса COCO (по умолчанию %(default)s: ровно zebra, без других животных)",
     )
     p.add_argument(
         "--stride",

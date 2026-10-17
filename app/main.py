@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="ЛР №4: подсчёт автомобилей в видео", docs_url=None, redoc_url=None, lifespan=lifespan)
+app = FastAPI(title="ЛР №4: подсчёт зебр в видео", docs_url=None, redoc_url=None, lifespan=lifespan)
 
 
 @app.get("/api/health")
@@ -41,7 +41,12 @@ def config() -> dict:
     return {
         "class_name": jobs.CLASS_NAME,
         "class_label": jobs.CLASS_LABEL,
-        "stride": {"default": jobs.DEFAULT_STRIDE, "min": jobs.MIN_STRIDE, "max": jobs.MAX_STRIDE, "step": jobs.STRIDE_STEP},
+        "stride": {
+            "default": jobs.DEFAULT_STRIDE,
+            "min": jobs.MIN_STRIDE,
+            "max": jobs.MAX_STRIDE,
+            "step": jobs.STRIDE_STEP,
+        },
         "limits": {
             "max_upload_mb": jobs.limits.max_upload_mb,
             "max_duration_sec": jobs.limits.max_duration_sec,

@@ -23,8 +23,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 
 # Параметры варианта 16 (менять нельзя) и границы слайдера.
-CLASS_NAME = "car"
-CLASS_LABEL = "автомобили"
+CLASS_NAME = "zebra"
+CLASS_LABEL = "зебры"
 DEFAULT_STRIDE = 5
 MIN_STRIDE = 5
 MAX_STRIDE = 30

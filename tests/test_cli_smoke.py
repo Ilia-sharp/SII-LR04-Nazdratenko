@@ -33,7 +33,7 @@ def test_cli_full_run_writes_all_outputs(tiny_video, tmp_path, fake_detector, ca
 
     report = json.loads((out / "report.json").read_text(encoding="utf-8"))
     assert tuple(report) == REPORT_KEYS
-    assert report["class_name"] == "car" and report["stride"] == 5  # значения варианта 16
+    assert report["class_name"] == "zebra" and report["stride"] == 5  # значения варианта 16
     assert report["frames_total"] == 14 and report["frames_processed"] == 3
     assert report["detections_per_frame_mean"] == 2.0 and report["detections_per_frame_max"] == 3
     assert report["unique_tracks"] is None
@@ -79,7 +79,7 @@ def test_cli_broken_video_exits_with_3(tmp_path, fake_detector):
 
 def test_cli_defaults_are_variant_16():
     args = count_video.build_parser().parse_args([])
-    assert (args.class_name, args.stride, args.source) == ("car", 5, "data/sample.mp4")
+    assert (args.class_name, args.stride, args.source) == ("zebra", 5, "data/sample.mp4")
 
 
 @pytest.mark.integration

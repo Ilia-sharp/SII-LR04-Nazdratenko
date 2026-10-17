@@ -74,7 +74,7 @@ def render(rows: list[tuple[dict, dict]], source_label: str, clipped: float | No
         f"**Значение по варианту 16 - stride = {VARIANT_STRIDE}.** Остальные значения запущены только для "
         "сравнения; основной результат работы (`report.json`, `examples/`) получен со stride 5.",
         "",
-        "| stride | кадров всего | обработано | среднее машин на кадр | максимум | elapsed_sec "
+        "| stride | кадров всего | обработано | среднее зебр на кадр | максимум | elapsed_sec "
         "| анализов в секунду видео | окно риска, с |",
         "|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
@@ -111,7 +111,7 @@ def render(rows: list[tuple[dict, dict]], source_label: str, clipped: float | No
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--source", default="data/sample.mp4")
-    parser.add_argument("--class", dest="class_name", default="car")
+    parser.add_argument("--class", dest="class_name", default="zebra")
     parser.add_argument("--strides", type=int, nargs="+", default=[1, 5, 10, 30])
     parser.add_argument("--clip-seconds", type=float, default=None, help="обрезать видео до первых N секунд")
     parser.add_argument("--imgsz", type=int, default=None)

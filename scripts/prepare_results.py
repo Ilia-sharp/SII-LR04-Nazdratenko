@@ -4,7 +4,7 @@
 
 Что делает:
   1. обрезает и пережимает видео через ffmpeg в data/sample.mp4 (H.264, без звука, до 8 МБ);
-  2. запускает CLI по варианту 16 (car, stride 5) и сохраняет результат в examples/sample/;
+  2. запускает CLI по варианту 16 (zebra, stride 5) и сохраняет результат в examples/sample/;
   3. проверяет report.json скриптом check_report.py и размеры файлов в examples/;
   4. прогоняет эксперимент со stride 1/5/10/30 и пишет docs/stride_experiment.md;
   5. подставляет реальные числа в README (между маркерами results и experiment).
@@ -106,10 +106,10 @@ def results_block() -> str:
     skipped = report["frames_total"] - report["frames_processed"]
     peak_mem = f", пик памяти процесса {info['peak_rss_mb']} МБ" if info.get("peak_rss_mb") else ""
     lines = [
-        "Запуск: `python -m src.count_video --source data/sample.mp4 --class car --stride 5`. "
+        "Запуск: `python -m src.count_video --source data/sample.mp4 --class zebra --stride 5`. "
         f"Видео {info['width']}×{info['height']}, {info['fps_source']:g} кадр/с. "
         f"Всего кадров {report['frames_total']}, обработано {report['frames_processed']}, пропущено {skipped}. "
-        f"Среднее число машин на обработанный кадр {report['detections_per_frame_mean']}, "
+        f"Среднее число зебр на обработанный кадр {report['detections_per_frame_mean']}, "
         f"максимум {report['detections_per_frame_max']}. "
         f"Время обработки {report['elapsed_sec']} с (загрузка модели {info['model_load_sec']} с{peak_mem}).",
         "",
@@ -127,7 +127,7 @@ def results_block() -> str:
     ]
     for number in numbers[:SHOWN_FRAMES]:
         name = by_number[number]
-        lines.append(f"![кадр {number}: car {counts[number]}](examples/sample/frames/{name})")
+        lines.append(f"![кадр {number}: zebra {counts[number]}](examples/sample/frames/{name})")
         lines.append("")
     if (EXAMPLE_DIR / "annotated.mp4").is_file():
         lines.append("Видео с рамками: [examples/sample/annotated.mp4](examples/sample/annotated.mp4). "
@@ -180,7 +180,7 @@ def main() -> int:
 
     if EXAMPLE_DIR.exists():
         shutil.rmtree(EXAMPLE_DIR)
-    run([sys.executable, "-m", "src.count_video", "--source", "data/sample.mp4", "--class", "car",
+    run([sys.executable, "-m", "src.count_video", "--source", "data/sample.mp4", "--class", "zebra",
          "--stride", "5", "--out", "examples/sample"])  # fmt: skip
 
     shrink_frames(EXAMPLE_DIR / "frames")

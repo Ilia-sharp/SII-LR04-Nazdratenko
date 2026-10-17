@@ -41,7 +41,7 @@ class UnknownClassError(ValueError):
 def resolve_class_id(names: dict[int, str] | list[str], class_name: str) -> int:
     """Найти id класса по имени (регистр не важен).
 
-    Для 'car' в COCO это ровно класс 2; грузовики, автобусы и мотоциклы
+    Для 'zebra' в COCO это ровно класс 22; лошади, жирафы и другие животные
     имеют другие id и не считаются.
     """
     pairs = list(names.items() if isinstance(names, dict) else enumerate(names))
